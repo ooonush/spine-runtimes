@@ -203,13 +203,8 @@ namespace Spine.Unity.Editor {
 			SceneView.onSceneGUIDelegate += DragAndDropInstantiation.SceneViewDragAndDrop;
 #endif
 
-#if UNITY_2021_2_OR_NEWER
-			DragAndDrop.RemoveDropHandler(HierarchyHandler.HandleDragAndDrop);
-			DragAndDrop.AddDropHandler(HierarchyHandler.HandleDragAndDrop);
-#else
-			EditorApplication.hierarchyWindowItemOnGUI -= HierarchyHandler.HandleDragAndDrop;
-			EditorApplication.hierarchyWindowItemOnGUI += HierarchyHandler.HandleDragAndDrop;
-#endif
+			EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= HierarchyHandler.HandleDragAndDrop;
+			EditorApplication.hierarchyWindowItemByEntityIdOnGUI += HierarchyHandler.HandleDragAndDrop;
 			// Hierarchy Icons
 #if NEWPLAYMODECALLBACKS
 			EditorApplication.playModeStateChanged -= HierarchyHandler.IconsOnPlaymodeStateChanged;
@@ -361,10 +356,10 @@ namespace Spine.Unity.Editor {
 		#endregion
 
 		public static class HierarchyHandler {
-			static Dictionary<int, GameObject> skeletonRendererTable = new Dictionary<int, GameObject>();
-			static Dictionary<int, SkeletonUtilityBone> skeletonUtilityBoneTable = new Dictionary<int, SkeletonUtilityBone>();
-			static Dictionary<int, BoundingBoxFollower> boundingBoxFollowerTable = new Dictionary<int, BoundingBoxFollower>();
-			static Dictionary<int, BoundingBoxFollowerGraphic> boundingBoxFollowerGraphicTable = new Dictionary<int, BoundingBoxFollowerGraphic>();
+			static Dictionary<EntityId, GameObject> skeletonRendererTable = new Dictionary<EntityId, GameObject>();
+			static Dictionary<EntityId, SkeletonUtilityBone> skeletonUtilityBoneTable = new Dictionary<EntityId, SkeletonUtilityBone>();
+			static Dictionary<EntityId, BoundingBoxFollower> boundingBoxFollowerTable = new Dictionary<EntityId, BoundingBoxFollower>();
+			static Dictionary<EntityId, BoundingBoxFollowerGraphic> boundingBoxFollowerGraphicTable = new Dictionary<EntityId, BoundingBoxFollowerGraphic>();
 
 #if NEWPLAYMODECALLBACKS
 			internal static void IconsOnPlaymodeStateChanged (PlayModeStateChange stateChange) {
@@ -381,7 +376,7 @@ namespace Spine.Unity.Editor {
 #else
 				EditorApplication.hierarchyWindowChanged -= IconsOnChanged;
 #endif
-				EditorApplication.hierarchyWindowItemOnGUI -= IconsOnGUI;
+				EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= IconsOnGUI;
 
 				if (!Application.isPlaying && Preferences.showHierarchyIcons) {
 #if NEWHIERARCHYWINDOWCALLBACKS
@@ -389,7 +384,7 @@ namespace Spine.Unity.Editor {
 #else
 					EditorApplication.hierarchyWindowChanged += IconsOnChanged;
 #endif
-					EditorApplication.hierarchyWindowItemOnGUI += IconsOnGUI;
+					EditorApplication.hierarchyWindowItemByEntityIdOnGUI += IconsOnGUI;
 					IconsOnChanged();
 				}
 			}
@@ -402,54 +397,54 @@ namespace Spine.Unity.Editor {
 
 				SkeletonRenderer[] arr = Object.FindObjectsOfType<SkeletonRenderer>();
 				foreach (SkeletonRenderer r in arr)
-					skeletonRendererTable[r.gameObject.GetInstanceID()] = r.gameObject;
+					skeletonRendererTable[r.gameObject.GetEntityId()] = r.gameObject;
 
 				SkeletonUtilityBone[] boneArr = Object.FindObjectsOfType<SkeletonUtilityBone>();
 				foreach (SkeletonUtilityBone b in boneArr)
-					skeletonUtilityBoneTable[b.gameObject.GetInstanceID()] = b;
+					skeletonUtilityBoneTable[b.gameObject.GetEntityId()] = b;
 
 				BoundingBoxFollower[] bbfArr = Object.FindObjectsOfType<BoundingBoxFollower>();
 				foreach (BoundingBoxFollower bbf in bbfArr)
-					boundingBoxFollowerTable[bbf.gameObject.GetInstanceID()] = bbf;
+					boundingBoxFollowerTable[bbf.gameObject.GetEntityId()] = bbf;
 
 				BoundingBoxFollowerGraphic[] bbfgArr = Object.FindObjectsOfType<BoundingBoxFollowerGraphic>();
 				foreach (BoundingBoxFollowerGraphic bbf in bbfgArr)
-					boundingBoxFollowerGraphicTable[bbf.gameObject.GetInstanceID()] = bbf;
+					boundingBoxFollowerGraphicTable[bbf.gameObject.GetEntityId()] = bbf;
 			}
 
-			internal static void IconsOnGUI (int instanceId, Rect selectionRect) {
+			internal static void IconsOnGUI (EntityId entityId, Rect selectionRect) {
 				Rect r = new Rect(selectionRect);
-				if (skeletonRendererTable.ContainsKey(instanceId)) {
+				if (skeletonRendererTable.ContainsKey(entityId)) {
 					r.x = r.width - 15;
 					r.width = 15;
 					GUI.Label(r, Icons.spine);
-				} else if (skeletonUtilityBoneTable.ContainsKey(instanceId)) {
+				} else if (skeletonUtilityBoneTable.ContainsKey(entityId)) {
 					r.x -= 26;
-					if (skeletonUtilityBoneTable[instanceId] != null) {
-						if (skeletonUtilityBoneTable[instanceId].transform.childCount == 0)
+					if (skeletonUtilityBoneTable[entityId] != null) {
+						if (skeletonUtilityBoneTable[entityId].transform.childCount == 0)
 							r.x += 13;
 						r.y += 2;
 						r.width = 13;
 						r.height = 13;
-						if (skeletonUtilityBoneTable[instanceId].mode == SkeletonUtilityBone.Mode.Follow)
+						if (skeletonUtilityBoneTable[entityId].mode == SkeletonUtilityBone.Mode.Follow)
 							GUI.DrawTexture(r, Icons.bone);
 						else
 							GUI.DrawTexture(r, Icons.poseBones);
 					}
-				} else if (boundingBoxFollowerTable.ContainsKey(instanceId)) {
+				} else if (boundingBoxFollowerTable.ContainsKey(entityId)) {
 					r.x -= 26;
-					if (boundingBoxFollowerTable[instanceId] != null) {
-						if (boundingBoxFollowerTable[instanceId].transform.childCount == 0)
+					if (boundingBoxFollowerTable[entityId] != null) {
+						if (boundingBoxFollowerTable[entityId].transform.childCount == 0)
 							r.x += 13;
 						r.y += 2;
 						r.width = 13;
 						r.height = 13;
 						GUI.DrawTexture(r, Icons.boundingBox);
 					}
-				} else if (boundingBoxFollowerGraphicTable.ContainsKey(instanceId)) {
+				} else if (boundingBoxFollowerGraphicTable.ContainsKey(entityId)) {
 					r.x -= 26;
-					if (boundingBoxFollowerGraphicTable[instanceId] != null) {
-						if (boundingBoxFollowerGraphicTable[instanceId].transform.childCount == 0)
+					if (boundingBoxFollowerGraphicTable[entityId] != null) {
+						if (boundingBoxFollowerGraphicTable[entityId].transform.childCount == 0)
 							r.x += 13;
 						r.y += 2;
 						r.width = 13;
@@ -459,33 +454,7 @@ namespace Spine.Unity.Editor {
 				}
 			}
 
-#if UNITY_2021_2_OR_NEWER
-			internal static DragAndDropVisualMode HandleDragAndDrop (int dropTargetInstanceID, HierarchyDropFlags dropMode, Transform parentForDraggedObjects, bool perform) {
-				SkeletonDataAsset skeletonDataAsset = DragAndDrop.objectReferences.Length == 0 ? null :
-					DragAndDrop.objectReferences[0] as SkeletonDataAsset;
-				if (skeletonDataAsset == null)
-					return DragAndDropVisualMode.None;
-				if (!perform)
-					return DragAndDropVisualMode.Copy;
-
-				GameObject dropTargetObject = UnityEditor.EditorUtility.InstanceIDToObject(dropTargetInstanceID) as GameObject;
-				Transform dropTarget = dropTargetObject != null ? dropTargetObject.transform : null;
-				Transform parent = dropTarget;
-				int siblingIndex = 0;
-				if (parent != null) {
-					if (dropMode == HierarchyDropFlags.DropBetween) {
-						parent = dropTarget.parent;
-						siblingIndex = dropTarget ? dropTarget.GetSiblingIndex() + 1 : 0;
-					} else if (dropMode == HierarchyDropFlags.DropAbove) {
-						parent = dropTarget.parent;
-						siblingIndex = dropTarget ? dropTarget.GetSiblingIndex() : 0;
-					}
-				}
-				DragAndDropInstantiation.ShowInstantiateContextMenu(skeletonDataAsset, Vector3.zero, parent, siblingIndex);
-				return DragAndDropVisualMode.Copy;
-			}
-#else
-			internal static void HandleDragAndDrop (int instanceId, Rect selectionRect) {
+			internal static void HandleDragAndDrop (EntityId entityId, Rect selectionRect) {
 				// HACK: Uses EditorApplication.hierarchyWindowItemOnGUI.
 				// Only works when there is at least one item in the scene.
 				UnityEngine.Event current = UnityEngine.Event.current;
@@ -510,7 +479,7 @@ namespace Spine.Unity.Editor {
 								const string GenericDataTargetID = "target";
 								if (HierarchyWindow.Equals(mouseOverWindow.GetType().ToString(), System.StringComparison.Ordinal)) {
 									if (isDraggingEvent) {
-										UnityEngine.Object mouseOverTarget = UnityEditor.EditorUtility.InstanceIDToObject(instanceId);
+										UnityEngine.Object mouseOverTarget = UnityEditor.EditorUtility.EntityIdToObject(entityId);
 										if (mouseOverTarget)
 											DragAndDrop.SetGenericData(GenericDataTargetID, mouseOverTarget);
 										// Note: do not call current.Use(), otherwise we get the wrong drop-target parent.
@@ -546,7 +515,6 @@ namespace Spine.Unity.Editor {
 				bool isLastNode = (rootNodes.Length > 0 && rootNodes[rootNodes.Length - 1].transform == node);
 				return isLastNode;
 			}
-#endif
 		}
 	}
 
